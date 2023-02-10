@@ -4,7 +4,7 @@
 # Date: Sun 19 Jun 2022 10:15:08 PM PDT
 
 # Add or change bluetooth device name here
-blue_headset='3B:64:D2:73:B4:C3'
+blue_headset='E8:EE:CC:23:BD:5A'
 
 sudo_checker () {
   pass
@@ -23,11 +23,14 @@ connect_bluetooth () {
 
 setting_audio_profile () {
   pactl set-sink-volume 0 20% 
+  local blue_device="$(string_convert $blue_headset)"
+  pactl set-default-sink "bluez_output.$blue_device.a2dp-sink"
 }
 
 disconnect_bluetooth () {
   local blue_device="$(echo "$blue_headset" | sed "s/_/:/g") "
   bluetoothctl -- disconnect $blue_headset; pactl set-sink-volume 0 0%
+  pactl set-default-sink alsa_output.pci-0000_00_1f.3.analog-stereo
 }
 
 restart_bluetooth () {
@@ -60,9 +63,10 @@ repatch_bluetooth () {
 set_audio_only () {
   # add profile to the card 
   local bluetooth_dev="$(string_convert $blue_headset)"
-  
-  pactl set-card-profile "bluez_card.$bluetooth_dev" a2dp-sink && notify-send "Bluetooth headset has been switched to audio mode" || notify-send "Volume has been switched to audio mode only"
+  pactl set-card-profile "bluez_card.$bluetooth_dev" a2dp-sink && notify-send "Bluetooth headset has been switched to audio mode" || notify-send "Unable to switch to audio sink";
+
   pactl set-sink-volume 0 70%
+  pactl set-default-sink bluez_output.$bluetooth_dev.a2dp-sink
   notify-send "Volume has been switched to 70 percent"
 }
 
@@ -102,6 +106,7 @@ main () {
 	 echo '1.0'
 	 ;;
        -c | --connect)
+	 restart_bluetooth 
 	 connect_bluetooth
 	 shift
 	 ;;
