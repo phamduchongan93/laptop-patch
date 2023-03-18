@@ -82,9 +82,9 @@ check_if_profile_available () {
 
 set_mic_only () {
   # add mic and audion 
-  bluetooth_dev="$(string_convert $blue_headset)"
+  local bluetooth_dev="$(string_convert $blue_headset)"
 
-  pactl set-card-profile "bluez_card.$blue_headset" headset-head-unit
+  pactl set-card-profile "bluez_card.$bluetooth_dev" headset-head-unit
   pactl set-sink-volume 0 40%
   echo "Volume has been switched to audio and mic mode"
   notify-send "Volume has been switched to audio and mic mode"
