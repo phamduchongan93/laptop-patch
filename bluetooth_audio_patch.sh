@@ -4,7 +4,7 @@
 # Date: Sun 19 Jun 2022 10:15:08 PM PDT
 
 # Add or change bluetooth device name here
-blue_headset='AC:12:2F:E3:FC:72'
+blue_headset='E8:EE:CC:23:BD:5A'
 
 # 
 sudo_checker () {
@@ -18,18 +18,22 @@ string_convert () {
 }
 
 connect_bluetooth () {
-  local blue_device="$(echo "$blue_headset" | sed "s/_/:/g") "
-  while ! bluetoothctl -- connect  "$blue_headset" &> /dev/null 
-  do 
-    echo "Waiting for bluetooth connection"
-    sleep 2
-  done
+  hcitool con | grep $blue_headset &> /dev/null
+  if [ $? == 1 ] 
+  then
+    while ! bluetoothctl -- connect "$blue_headset"
+    do 
+      echo "Waiting for bluetooth connection"
+      sleep 1
+    done
+  fi
 }
 
 setting_audio_profile () {
   pactl set-sink-volume 0 20% 
   local blue_device="$(string_convert $blue_headset)"
-  pactl set-default-sink "bluez_output.$blue_device.a2dp-sink"
+  #check audio profile
+  pactl set-default-sink "bluez_output.$blue_device.a2dp-sink" && notify-send "Audio connected!"
 }
 
 disconnect_bluetooth () {
@@ -45,6 +49,7 @@ restart_bluetooth () {
 }
 
 install_dependency () {
+  # Installing pipewire audio library (on top of pulseaudio)
   add-apt-repository ppa:pipewire-debian/pipewire-upstream
   apt-get update
   apt install pipewire pipewire-audio-client-libraries
@@ -52,8 +57,6 @@ install_dependency () {
   # Installing notifier
   apt install dunst
 }
-
-
 
 repatch_bluetooth () {
   apt install libspa-0.2-bluetooth 
@@ -68,11 +71,24 @@ repatch_bluetooth () {
 set_audio_only () {
   # add profile to the card 
   local bluetooth_dev="$(string_convert $blue_headset)"
-  pactl set-card-profile "bluez_card.$bluetooth_dev" a2dp-sink && notify-send "Bluetooth headset has been switched to audio mode" || notify-send "Unable to switch to audio sink";
+  pactl set-card-profile "bluez_card.$bluetooth_dev" a2dp-sink && notify-send "Bluetooth headset has been switched to audio mode" 
+  if [ $? == 0 ] 
+  then
+    pactl set-sink-volume 0 70%
+    pactl set-default-sink "bluez_output.$bluetooth_dev.a2dp-sink"
+  else 
+    notify-send "Error: can't find audio source"
+  fi
+}
 
-  pactl set-sink-volume 0 70%
-  pactl set-default-sink bluez_output.$bluetooth_dev.a2dp-sink
-  notify-send "Volume has been switched to 70 percent"
+increase_volume () {
+  pactl set-sink-volume 0 +10%
+  notify-send "Volume has been increased"
+}
+
+decrease_volume () {
+  pactl set-sink-volume 0 -10%
+  notify-send "Volume has been decreased"
 }
 
 check_if_device_available () {
@@ -108,24 +124,23 @@ main () {
 	 restart_bluetooth
 	 shift
 	 ;;
-       --install | -i)
+       --install-dependency )
 	 install_dependency
 	 shift
 	 ;;
        --version | -v)
 	 echo '1.0'
 	 ;;
-       -c | --connect)
-	 restart_bluetooth 
+       --con | --connect)
 	 connect_bluetooth
 	 shift
 	 ;;
-       -d | --disconnect)
+       --dis | --disconnect)
 	 disconnect_bluetooth
 	 shift
 	 ;;
        --audio | -a)
-	 connect_bluetooth && set_audio_only || echo "Fail: Unable to connect the bluetooth device"
+	 connect_bluetooth && sleep 3s && set_audio_only || echo "Fail: Unable to connect the bluetooth device"
 	 shift
 	 ;;
        -m)
@@ -140,6 +155,14 @@ main () {
 	 connect_bluetooth && set_mic_only || echo "Fail: Unable to connect the bluetooth device"
 	 shift
 	 ;;
+       -i | --inc)
+         increase_volume 
+	 shift
+	 ;;
+       --dec)
+         decrease_volume 
+	 shift
+	 ;;
        * | -*)
 	 echo 'Invalid argument'
 	 help
@@ -151,18 +174,18 @@ main () {
 }
 
 help () {
-  echo "Usuage: $(basename $0) <-c|-d|-a|-ac>. First, edit the variable to match your bluetooth interface MAC  address. "
+  echo "Usuage: $(basename $0) <--con|--dis|-a|-ac>. First, edit the variable to match your bluetooth interface MAC  address. "
   echo ''
   echo 'Where:'
-  echo '  -c,--check       check if the bluetooth headset is connected'
-  echo '  -r,--restart     restart the bluetooth headset connection' 
-  echo '  -l,--list        show current bluetooth devices'
-  echo '  -d,--disconnect  disconnect bluetooth headset'
-  echo '  -a,--audio       connect with audio only'
-  echo '  -ac,--audio-mic  connect with both audio and mic'
-  echo '  -m,--mute	   mute the audio'
-  echo '  -um,--unmute	   unmute the audio'
-  echo '  -i,--install	   install dependency'
+  echo '  --con,--connect       connect to bluetooth device from the script'
+  echo '  -r,--restart          restart the bluetooth headset connection' 
+  echo '  -l,--list             show current bluetooth devices'
+  echo '  --dis,--disconnect       disconnect bluetooth headset'
+  echo '  -a,--audio            connect with audio only'
+  echo '  -ac,--audio-mic       connect with both audio and mic'
+  echo '  -m,--mute	        mute the audio'
+  echo '  -um,--unmute	        unmute the audio'
+  echo '  -i,--install	        install dependency'
 
   echo '' 
   echo 'Example:'
