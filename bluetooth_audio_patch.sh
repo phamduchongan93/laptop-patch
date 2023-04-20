@@ -4,8 +4,9 @@
 # Date: Sun 19 Jun 2022 10:15:08 PM PDT
 
 # Add or change bluetooth device name here
-blue_headset='E8:EE:CC:23:BD:5A'
+blue_headset='AC:12:2F:E3:FC:72'
 
+# 
 sudo_checker () {
   pass
 }
@@ -18,7 +19,11 @@ string_convert () {
 
 connect_bluetooth () {
   local blue_device="$(echo "$blue_headset" | sed "s/_/:/g") "
-  bluetoothctl -- connect  $blue_headset; pactl set-sink-volume 0 20% 
+  while ! bluetoothctl -- connect  "$blue_headset" &> /dev/null 
+  do 
+    echo "Waiting for bluetooth connection"
+    sleep 2
+  done
 }
 
 setting_audio_profile () {
@@ -44,11 +49,11 @@ install_dependency () {
   apt-get update
   apt install pipewire pipewire-audio-client-libraries
   apt install gstreamer1.0-pipewire libpipewire-0.3-{0,dev,modules} libspa-0.2-{bluetooth,dev,jack,modules} pipewire{,-{audio-client-libraries,pulse,media-session,bin,locales,tests}}
-}
-
-install_notifier () {
+  # Installing notifier
   apt install dunst
 }
+
+
 
 repatch_bluetooth () {
   apt install libspa-0.2-bluetooth 
@@ -74,10 +79,7 @@ check_if_device_available () {
   local device_name="$(bluetoothctl -- devices) | grep $blue_headset)"; 
   [ "$?" = 0 ] && echo "Deviced Found"
   grep -i [$bluetooth_headset]  
-}
-
-check_if_profile_available () {
-  local profile_name=''
+  # WIP
 }
 
 set_mic_only () {
@@ -88,6 +90,14 @@ set_mic_only () {
   pactl set-sink-volume 0 40%
   echo "Volume has been switched to audio and mic mode"
   notify-send "Volume has been switched to audio and mic mode"
+}
+
+mute_audio () {
+  pactl set-sink-volume 0 0%
+}
+
+unmute_audio () {
+  pactl set-sink-volume 0 40%
 }
 
 main () {
@@ -118,6 +128,14 @@ main () {
 	 connect_bluetooth && set_audio_only || echo "Fail: Unable to connect the bluetooth device"
 	 shift
 	 ;;
+       -m)
+	 mute_audio
+	 shift
+	 ;;
+       -um)
+	 unmute_audio
+	 shift
+	 ;;
        --mic | -ac)
 	 connect_bluetooth && set_mic_only || echo "Fail: Unable to connect the bluetooth device"
 	 shift
@@ -142,7 +160,10 @@ help () {
   echo '  -d,--disconnect  disconnect bluetooth headset'
   echo '  -a,--audio       connect with audio only'
   echo '  -ac,--audio-mic  connect with both audio and mic'
+  echo '  -m,--mute	   mute the audio'
+  echo '  -um,--unmute	   unmute the audio'
   echo '  -i,--install	   install dependency'
+
   echo '' 
   echo 'Example:'
   echo "  $(basename $0) -c | --check   Check if the device is connected"
