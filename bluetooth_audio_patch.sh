@@ -7,6 +7,18 @@
 blue_headset='E8:EE:CC:23:BD:5A'
 
 # 
+file="/home/anpham/scripts/laptop-mode/var.file"
+
+name=$(cat "$file")
+
+display_devices () {
+  bluetoothctl -- devices | cut -d " " -f 1 --complement
+}
+
+select_device () {
+ pass  
+}
+
 sudo_checker () {
   pass
 }
@@ -163,6 +175,11 @@ main () {
          decrease_volume 
 	 shift
 	 ;;
+       --display | -l)
+	 display_devices
+	 shift
+	 ;;
+ 
        * | -*)
 	 echo 'Invalid argument'
 	 help
