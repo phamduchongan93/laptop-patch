@@ -2,14 +2,11 @@
 # Description: this patch is used to connect bluetooth headset that can support both external mic and external audio
 # Author: An Pham
 # Date: Sun 19 Jun 2022 10:15:08 PM PDT
-
+source ./device_change.sh
 # Add or change bluetooth device name here
-blue_headset='E8:EE:CC:23:BD:5A'
-
+blue_headset=AC:12:2F:C8:56:FC
+#blue_headset='E8:EE:CC:23:BD:5A'
 # 
-file="/home/anpham/scripts/laptop-mode/var.file"
-
-name=$(cat "$file")
 
 display_devices () {
   bluetoothctl -- devices | cut -d " " -f 1 --complement
@@ -179,7 +176,11 @@ main () {
 	 display_devices
 	 shift
 	 ;;
- 
+       --change-bluetooth)
+	 ask_devices
+	 connect_bluetooth && sleep 3s && set_audio_only || echo "Fail: Unable to connect the bluetooth device"
+	 shift
+	 ;;
        * | -*)
 	 echo 'Invalid argument'
 	 help
@@ -203,7 +204,7 @@ help () {
   echo '  -m,--mute	        mute the audio'
   echo '  -um,--unmute	        unmute the audio'
   echo '  -i,--install	        install dependency'
-
+  echo '  --change-bluetooth    change bluetooth device'
   echo '' 
   echo 'Example:'
   echo "  $(basename $0) -c | --check   Check if the device is connected"
