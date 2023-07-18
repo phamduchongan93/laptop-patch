@@ -6,7 +6,7 @@
 change_second_monitor () {
   xrandr --auto
   xrandr --output DP1 --primary --auto
-  xrandr --output eDP1 --left-of DP1 --auto 
+  xrandr --output eDP1 --right-of DP1 --auto 
 }
 
 turn_off_screen_light () {
